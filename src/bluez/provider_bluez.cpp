@@ -102,8 +102,8 @@ void Bridge::addDevice(const QDBusObjectPath &v)
 {
     removeDevice(v);
 
-    Device *device(new Device(service_name, v.path(), bus_));
-    devices_.insert(std::pair<QDBusObjectPath,std::unique_ptr<Device> >(v, std::unique_ptr<Device>(device)));
+
+    auto device = cor::make_unique<Device>(service_name, v.path(), bus_);
 
     sync(device->GetProperties()
          , [this,v](const QVariantMap &props) {
@@ -117,7 +117,7 @@ void Bridge::addDevice(const QDBusObjectPath &v)
             }
          });
 
-    connect(device, &Device::PropertyChanged
+    connect(device.get(), &Device::PropertyChanged
         , [this,v](const QString &name, const QDBusVariant &value) {
             if (name == QLatin1String("Connected")) {
                 if (value.variant().toBool())
@@ -127,6 +127,7 @@ void Bridge::addDevice(const QDBusObjectPath &v)
                 updateProperty("Connected", connected_.size() > 0);
             }
         });
+    devices_.insert(std::make_pair(v, std::move(device)));
 }
 
 void Bridge::removeDevice(const QDBusObjectPath &v)
