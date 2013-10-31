@@ -12,14 +12,16 @@ link_directories(
 
 set(MGR_IF org.bluez.Manager.xml)
 set(ADA_IF org.bluez.Adapter.xml) 
+set(DEV_IF org.bluez.Device.xml)
 #set(ALL_IF org.bluez.all.xml)
 
-set_source_files_properties(${MGR_IF} ${ADA_IF}
+set_source_files_properties(${MGR_IF} ${ADA_IF} ${DEV_IF}
   PROPERTIES INCLUDE common.h
   )
 
 qt5_add_dbus_interface(SRC ${MGR_IF} manager_interface)
 qt5_add_dbus_interface(SRC ${ADA_IF} adapter_interface)
+qt5_add_dbus_interface(SRC ${DEV_IF} device_interface)
 #qt5_add_dbus_interface(SRC ${ALL_IF} all)
 
 add_library(provider-bluez SHARED

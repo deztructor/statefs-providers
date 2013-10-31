@@ -69,17 +69,73 @@ void Bridge::defaultAdapterChanged(const QDBusObjectPath &v)
     qDebug() << "New default bluetooth adapter" << v.path();
     defaultAdapter_ = v;
 
-    device_.reset(new Device(service_name, v.path(), bus_));
+    adapter_.reset(new Adapter(service_name, v.path(), bus_));
 
-    sync(device_->GetProperties()
+    sync(adapter_->GetProperties()
          , [this](QVariantMap const &v) {
              setProperties(v);
          });
 
-    connect(device_.get(), &Device::PropertyChanged
+    connect(adapter_.get(), &Adapter::PropertyChanged
             , [this](const QString &name, const QDBusVariant &value) {
                 updateProperty(name, value.variant());
             });
+
+    sync(adapter_->ListDevices()
+         , [this](const QList<QDBusObjectPath> &devs) {
+            foreach(QDBusObjectPath dev, devs) {
+                addDevice(dev);
+            }
+         });
+
+    connect(adapter_.get(), &Adapter::DeviceRemoved
+            , [this](const QDBusObjectPath &path) {
+                removeDevice(path);
+            });
+    connect(adapter_.get(), &Adapter::DeviceCreated
+            , [this](const QDBusObjectPath &path) {
+                addDevice(path);
+            });
+}
+
+void Bridge::addDevice(const QDBusObjectPath &v)
+{
+    removeDevice(v);
+
+    Device *device(new Device(service_name, v.path(), bus_));
+    devices_.insert(std::pair<QDBusObjectPath,std::unique_ptr<Device> >(v, std::unique_ptr<Device>(device)));
+
+    sync(device->GetProperties()
+         , [this,v](const QVariantMap &props) {
+            QVariantMap::const_iterator it = props.find("Connected");
+            if (it != props.end()) {
+                if (it.value().toBool())
+                    connected_.insert(v);
+                else
+                    connected_.erase(v);
+                updateProperty("Connected", connected_.size() > 0);
+            }
+         });
+
+    connect(device, &Device::PropertyChanged
+        , [this,v](const QString &name, const QDBusVariant &value) {
+            if (name == QLatin1String("Connected")) {
+                if (value.variant().toBool())
+                    connected_.insert(v);
+                else
+                    connected_.erase(v);
+                updateProperty("Connected", connected_.size() > 0);
+            }
+        });
+}
+
+void Bridge::removeDevice(const QDBusObjectPath &v)
+{
+    auto it = devices_.find(v);
+    if (it != devices_.end())
+        devices_.erase(it);
+    if (connected_.erase(v))
+        updateProperty("Connected", connected_.size() > 0);
 }
 
 BlueZ::BlueZ(QDBusConnection &bus)
