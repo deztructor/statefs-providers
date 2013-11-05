@@ -85,9 +85,9 @@ void Bridge::defaultAdapterChanged(const QDBusObjectPath &v)
 
     sync(adapter_->ListDevices()
          , [this](const QList<QDBusObjectPath> &devs) {
-            foreach(QDBusObjectPath dev, devs) {
-                addDevice(dev);
-            }
+             foreach(QDBusObjectPath dev, devs) {
+                 addDevice(dev);
+             }
          });
 
     connect(adapter_.get(), &Adapter::DeviceRemoved
@@ -108,26 +108,26 @@ void Bridge::addDevice(const QDBusObjectPath &v)
 
     sync(device.get()->GetProperties()
          , [this,v](const QVariantMap &props) {
-            QVariantMap::const_iterator it = props.find("Connected");
-            if (it != props.end()) {
-                if (it.value().toBool())
-                    connected_.insert(v);
-                else
-                    connected_.erase(v);
-                updateProperty("Connected", connected_.size() > 0);
-            }
+             QVariantMap::const_iterator it = props.find("Connected");
+             if (it != props.end()) {
+                 if (it.value().toBool())
+                     connected_.insert(v);
+                 else
+                     connected_.erase(v);
+                 updateProperty("Connected", connected_.size() > 0);
+             }
          });
 
     connect(device.get(), &Device::PropertyChanged
-        , [this,v](const QString &name, const QDBusVariant &value) {
-            if (name == QLatin1String("Connected")) {
-                if (value.variant().toBool())
-                    connected_.insert(v);
-                else
-                    connected_.erase(v);
-                updateProperty("Connected", connected_.size() > 0);
-            }
-        });
+            , [this,v](const QString &name, const QDBusVariant &value) {
+                if (name == QLatin1String("Connected")) {
+                    if (value.variant().toBool())
+                        connected_.insert(v);
+                    else
+                        connected_.erase(v);
+                    updateProperty("Connected", connected_.size() > 0);
+                }
+            });
 
     devices_.insert(std::make_pair(v, std::move(device)));
 }
