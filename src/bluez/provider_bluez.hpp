@@ -42,8 +42,10 @@ private:
     QDBusObjectPath defaultAdapter_;
     std::unique_ptr<Manager> manager_;
     std::unique_ptr<Adapter> adapter_;
-    std::map<QDBusObjectPath,std::unique_ptr<Device> > devices_;
-    std::set<QDBusObjectPath> connected_;
+    std::map<QString, std::shared_ptr<Device> > devices_;
+    std::set<QString> connected_;
+    std::set<QString> headsets_;
+    QString connected_headset_;
     statefs::qt::ServiceWatch watch_;
 };
 

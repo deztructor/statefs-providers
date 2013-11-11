@@ -34,6 +34,7 @@ namespace statefs { namespace bluez {
 using statefs::qt::Namespace;
 using statefs::qt::PropertiesSource;
 using statefs::qt::sync;
+using statefs::qt::async;
 
 static char const *service_name = "org.bluez";
 
@@ -47,18 +48,17 @@ Bridge::Bridge(BlueZ *ns, QDBusConnection &bus)
 void Bridge::init()
 {
     auto setup_manager = [this]() {
+        qDebug() << "Setup bluez manager";
         manager_.reset(new Manager(service_name, "/", bus_));
         connect(manager_.get(), &Manager::DefaultAdapterChanged
                 , this, &Bridge::defaultAdapterChanged);
 
-        auto getDefault = sync(manager_->DefaultAdapter());
-        if (getDefault.isError()) {
-            qWarning() << "DefaultAdapter error:" << getDefault.error();
-        } else {
-            defaultAdapterChanged(getDefault.value());
-        }
+        using namespace std::placeholders;
+        async(this, manager_->DefaultAdapter()
+              , std::bind(&Bridge::defaultAdapterChanged, this,_1));
     };
     auto reset_manager = [this]() {
+        qDebug() << "Reset bluez manager";
         manager_.reset();
         static_cast<BlueZ*>(target_)->reset_properties();
     };
@@ -83,62 +83,98 @@ void Bridge::defaultAdapterChanged(const QDBusObjectPath &v)
                 updateProperty(name, value.variant());
             });
 
-    sync(adapter_->ListDevices()
+    async(adapter_->ListDevices()
          , [this](const QList<QDBusObjectPath> &devs) {
-             foreach(QDBusObjectPath dev, devs) {
+             foreach(QDBusObjectPath dev, devs)
                  addDevice(dev);
-             }
          });
 
     connect(adapter_.get(), &Adapter::DeviceRemoved
-            , [this](const QDBusObjectPath &path) {
-                removeDevice(path);
-            });
+            , this, &Bind::removeDevice);
     connect(adapter_.get(), &Adapter::DeviceCreated
-            , [this](const QDBusObjectPath &path) {
-                addDevice(path);
-            });
+            , this, &Bind::addDevice);
+}
+
+static const QString headset_uuid = "00001108";
+static bool isHeadset(QString const &uuid)
+{
+    auto id = uuid.left(headset_uuid.size());
+    return id == headset_uuid;
 }
 
 void Bridge::addDevice(const QDBusObjectPath &v)
 {
     removeDevice(v);
+    auto path = v.path();
+    auto device = std::make_shared<Device>(service_name, path, bus_);
 
-    auto device = cor::make_unique<Device>(service_name, v.path(), bus_);
+    auto check_headset = [this, path](bool is_connected, bool is_headset) {
+        if (!is_headset)
+            return;
 
-    sync(device.get()->GetProperties()
-         , [this,v](const QVariantMap &props) {
-             QVariantMap::const_iterator it = props.find("Connected");
-             if (it != props.end()) {
-                 if (it.value().toBool())
-                     connected_.insert(v);
-                 else
-                     connected_.erase(v);
-                 updateProperty("Connected", connected_.size() > 0);
-             }
-         });
+        qDebug() << "Headset " << path << " is " << (!is_connected ? "dis" : "") << "connected";
+        if (is_connected) {
+            connected_headset_ = path;
+            updateProperty("Headset", is_connected);
+        } else {
+            if (path == connected_headset_) {
+                updateProperty("Headset", is_connected);
+                connected_headset_ = "";
+            }
+        }
+    };
 
+    auto on_connected = [this, path, check_headset](bool is_connected) {
+        if (is_connected)
+            connected_.insert(path);
+        else
+            connected_.erase(path);
+        updateProperty("Connected", connected_.size() > 0);
+        check_headset(is_connected, headsets_.count(path));
+    };
+
+    auto on_uuid = [this, path, check_headset](QStringList const &uuids) {
+        auto is_headset = std::any_of(uuids.begin(), uuids.end(), isHeadset);
+        if (is_headset)
+            headsets_.insert(path);
+        else
+            headsets_.erase(path);
+
+        check_headset(connected_.count(path), is_headset);
+    };
+
+    auto processProperty = [on_connected, on_uuid]
+        (const QString &name, const QVariant &value) {
+        if (name == QLatin1String("Connected")) {
+            on_connected(value.toBool());
+        } else if (name == QLatin1String("UUIDs")) {
+            on_uuid(value.toStringList());
+        }
+    };
+
+    devices_.insert(std::make_pair(path, device));
+    async(device->GetProperties()
+          , [processProperty](const QVariantMap &props) {
+              for (auto it = props.begin(); it != props.end(); ++it)
+                  processProperty(it.key(), it.value());
+          });
     connect(device.get(), &Device::PropertyChanged
-            , [this,v](const QString &name, const QDBusVariant &value) {
-                if (name == QLatin1String("Connected")) {
-                    if (value.variant().toBool())
-                        connected_.insert(v);
-                    else
-                        connected_.erase(v);
-                    updateProperty("Connected", connected_.size() > 0);
-                }
+            , [processProperty](const QString &name, const QDBusVariant &value) {
+                processProperty(name, value.variant());
             });
-
-    devices_.insert(std::make_pair(v, std::move(device)));
 }
 
 void Bridge::removeDevice(const QDBusObjectPath &v)
 {
-    auto it = devices_.find(v);
-    if (it != devices_.end())
-        devices_.erase(it);
-    if (connected_.erase(v))
+    auto path = v.path();
+    devices_.erase(path);
+    if (connected_.erase(path))
         updateProperty("Connected", connected_.size() > 0);
+
+    if (headsets_.erase(path) && path == connected_headset_) {
+        updateProperty("Headset", false);
+        connected_headset_ = "";
+    }
 }
 
 BlueZ::BlueZ(QDBusConnection &bus)
@@ -148,12 +184,14 @@ BlueZ::BlueZ(QDBusConnection &bus)
             { "Enabled", "0" }
             , { "Visible", "0" }
             , { "Connected", "0" }
-            , { "Address", "00:00:00:00:00:00" }})
+            , { "Address", "00:00:00:00:00:00" }
+            , { "Headset", "0" }})
 {
     addProperty("Enabled", "0", "Powered");
     addProperty("Visible", "0", "Discoverable");
     addProperty("Connected", "0");
     addProperty("Address", "00:00:00:00:00:00");
+    addProperty("Headset", "0");
     src_->init();
 }
 
