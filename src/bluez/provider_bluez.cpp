@@ -27,6 +27,7 @@
 #include <functional>
 #include <cor/util.hpp>
 #include <statefs/qt/dbus.hpp>
+#include "dbus_types.hpp"
 
 namespace statefs { namespace bluez {
 

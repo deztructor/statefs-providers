@@ -10,18 +10,10 @@
 #include <statefs/qt/dbus.hpp>
 
 typedef std::tuple<unsigned, QString> BluezService;
-/* struct BluezService */
-/* { */
-/*     unsigned i; */
-/*     QString s; */
-/* }; */
-
 Q_DECLARE_METATYPE(BluezService);
 
 typedef QList<BluezService> ServiceMap;
-
-QDBusArgument &operator <<(QDBusArgument &, BluezService const&);
-QDBusArgument const& operator >>(QDBusArgument const&, BluezService&);
+Q_DECLARE_METATYPE(ServiceMap);
 
 static inline void registerDataTypes()
 {

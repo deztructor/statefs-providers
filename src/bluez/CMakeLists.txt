@@ -16,7 +16,7 @@ set(DEV_IF org.bluez.Device.xml)
 #set(ALL_IF org.bluez.all.xml)
 
 set_source_files_properties(${MGR_IF} ${ADA_IF} ${DEV_IF}
-  PROPERTIES INCLUDE common.h
+  PROPERTIES INCLUDE dbus_types.hpp
   )
 
 qt5_add_dbus_interface(SRC ${MGR_IF} manager_interface)
