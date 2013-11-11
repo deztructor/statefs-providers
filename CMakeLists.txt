@@ -30,6 +30,11 @@ set(CMAKE_CXX_FLAGS
   "${CMAKE_CXX_FLAGS} -Wno-psabi"
 )
 
+# fix for gcc 4.6 specific compiling/linking issues, no dwarf-4
+set(CMAKE_CXX_FLAGS
+  "${CMAKE_CXX_FLAGS} -gdwarf-3"
+  )
+
 pkg_check_modules(STATEFS statefs-cpp REQUIRED)
 pkg_check_modules(STATEFS_QT5 statefs-qt5 REQUIRED)
 
@@ -63,4 +68,3 @@ add_subdirectory(src/profile)
 add_subdirectory(src/keyboard_generic)
 add_subdirectory(src/udev)
 add_subdirectory(tests)
-
