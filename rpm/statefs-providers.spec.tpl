@@ -1,3 +1,4 @@
+@@header@@
 %define ckit_version 0.7.41
 %define ckit_version1 0.7.42
 %define ckit_statefs_version 0.2.30
