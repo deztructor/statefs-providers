@@ -95,11 +95,132 @@ void Bridge::defaultAdapterChanged(const QDBusObjectPath &v)
             , this, &Bind::addDevice);
 }
 
-static const QString headset_uuid = "00001108";
-static bool isHeadset(QString const &uuid)
+static const QString uuids[] = {
+    "00001108",
+    "00000011"
+};
+
+static Protocol getProtocol(QString const &uuid)
 {
-    auto id = uuid.left(headset_uuid.size());
-    return id == headset_uuid;
+    static const size_t len = sizeof("11112222") - 1;
+    static const std::map<QString, Protocol> protocol_ids[] = {
+        {"00001108", Protocol::Headset},
+        {"00000011", Protocol::HIDP}
+    };
+
+    auto id = uuid.left(len);
+    auto it = protocol_ids.find(id);
+    return (it != protocol_ids.end()) ? it->second : Protocol::EOE;
+}
+
+static std::set<Protocol> getProtocols(QStringList const &uuids)
+{
+    std::set<Protocol> protocols;
+    auto add_protocol = [&protocols](QString const &uuid) {
+        auto p = getProtocol(uuid);
+        if (p != Protocol::EOE)
+            protocols.insert(p);
+    };
+    std::for_each(uuids.begin(), uuids.end(), add_protocol);
+    return protocols;
+}
+
+static bool isProtocol(QString const &uuid, Protocol id)
+{
+    auto &profile_id = uuids[static_cast<size_t>(p)];
+    auto id = uuid.left(profile_id.size());
+    return id == profile_id;
+}
+
+void DeviceInfo::processUUIDs(QVariant const &v)
+{
+    QStringList uuids = v.toStringList();
+    auto now = getProtocols(uuids);
+    if (state_ == State::Connected) {
+        std::set<Protocol> added, removed;
+        std::set_difference(protocols_.begin(), protocols_.end()
+                            , now.begin(), now.end()
+                            , std::inserter(removed));
+        if (!removed.empty())
+            onProtocolsRemoved(removed);
+        std::set_difference(protocols_.begin(), protocols_.end()
+                            , now.begin(), now.end()
+                            , std::inserter(added));
+        if (!added.empty())
+            onProtocolsAdded(added);
+    }
+    protocols_ = now;
+}
+
+void DeviceInfo::processConnected = (bool is_connected) {
+    auto new_state = is_connected ? State::Connected : State::Disconnected;
+    auto is_connection_toggled; // connected<->disconnected
+    is_connection_toggled = (state_ == State::Unknown
+                             ? is_connected
+                             : new_state != state_);
+
+    if (is_connection_toggled && !protocols_.empty()) {
+        if (is_connected)
+            onProtocolsAdded(protocols_);
+        else
+            onProtocolsRemoved(protocols_);
+    }
+    state_ = new_state;
+    if (is_connection_toggled)
+        onStateChanged(new_state);
+};
+
+void DeviceInfo::processProperty(const QString &name, const QVariant &value)
+{
+    if (name == QLatin1String("Connected")) {
+        processConnected(value.toBool());
+    } else if (name == QLatin1String("UUIDs")) {
+        processUUIDs(value.toStringList());
+    }
+}
+
+void Devices::add(const QDBusObjectPath &v)
+{
+    remove(v);
+    auto path = v.path();
+    auto device = std::make_shared<DeviceInfo>(service_name, path, bus_);
+
+    auto pathProtocolAdd = [this](QString const &path, Protocol added) {
+        auto &proto = connected_protocols_[added];
+        auto is_newly_added = proto.empty();
+        proto.insert(path);
+        if (is_newly_added)
+            updateProperty(protocol_property_names_[added], 1);
+    };
+
+    auto pathProtocolRemove = [this](QString const &path, Protocol removed) {
+        auto &proto = connected_protocols_[added];
+        proto.remove(path);
+        if (proto.empty())
+            updateProperty(protocol_property_names_[added], 0);
+    };
+
+    auto protocolsAdded = [pathProtocolAdd]
+        (QString const &path, std::set<Protocol> const &added) {
+        std::for_each(added.begin(), added.end(); pathProtocolAdd);
+    };
+    auto protocolsRemoved = [pathProtocolRemove]
+        (QString const& path, std::set<Protocol> const &removed) {
+        std::for_each(added.begin(), added.end(); pathProtocolRemove);
+    };
+    auto stateChanged = [this](QString const&, DeviceInfo::State) {
+    };
+
+    connect(device.get(), &DeviceInfo::onProtocolsAdded, protocolsAdded);
+    connect(device.get(), &DeviceInfo::onProtocolsRemoved, protocolsRemoved);
+    connect(device.get(), &DeviceInfo::onStateChanged, stateChanged);
+
+    devices_.insert(std::make_pair(path, device));
+}
+
+void Devices::remove(const QDBusObjectPath &v)
+{
+    TODO;
 }
 
 void Bridge::addDevice(const QDBusObjectPath &v)
@@ -134,7 +255,8 @@ void Bridge::addDevice(const QDBusObjectPath &v)
     };
 
     auto on_uuid = [this, path, check_headset](QStringList const &uuids) {
-        auto is_headset = std::any_of(uuids.begin(), uuids.end(), isHeadset);
+        auto is_headset = std::any_of(uuids.begin(), uuids.end()
+                                      , isProtocol<Protocol::Headset>);
         if (is_headset)
             headsets_.insert(path);
         else
