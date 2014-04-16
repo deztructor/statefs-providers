@@ -188,22 +188,6 @@ Conflicts: statefs-provider-inout-mode-control
 %{summary}
 
 
-%package -n statefs-provider-keyboard-generic
-Summary: Statefs provider, source - sysfs/udev
-Group: System Environment/Libraries
-Requires(post): /sbin/ldconfig
-Requires(postun): /sbin/ldconfig
-Requires: %{n_common} = %{version}-%{release}
-Requires: statefs-loader-qt5 >= 0.0.9
-BuildRequires: pkgconfig(cor-udev) >= 0.1.11
-Obsoletes: contextkit-plugin-keyboard-generic <= %{ckit_version}
-Provides: contextkit-plugin-keyboard-generic = %{ckit_version1}
-Provides: statefs-provider-keyboard = %{version}-%{release}
-Conflicts: statefs-provider-inout-keyboard
-%description -n statefs-provider-keyboard-generic
-%{summary}
-
-
 %package -n statefs-provider-profile
 Summary: Statefs provider, source - profiled
 Group: System Environment/Libraries
@@ -273,6 +257,20 @@ Group: System Environment/Libraries
 Requires(post): /sbin/ldconfig
 Requires(postun): /sbin/ldconfig
 %description -n statefs-provider-back-cover
+%{summary}
+
+
+%package -n statefs-provider-keyboard-generic
+Summary: Statefs provider, source - sysfs/udev
+Group: System Environment/Libraries
+Requires(post): /sbin/ldconfig
+Requires(postun): /sbin/ldconfig
+BuildRequires: pkgconfig(cor-udev) >= 0.1.11
+Obsoletes: contextkit-plugin-keyboard-generic <= %{ckit_version}
+Provides: contextkit-plugin-keyboard-generic = %{ckit_version1}
+Provides: statefs-provider-keyboard = %{version}-%{release}
+Conflicts: statefs-provider-inout-keyboard
+%description -n statefs-provider-keyboard-generic
 %{summary}
 
 
@@ -433,13 +431,14 @@ pushd inout && make install DESTDIR=%{buildroot} && popd
 
 %statefs_provider_install default back_cover %{_statefs_libdir}/libprovider-back_cover.so system
 
+%statefs_provider_install default keyboard_generic %{_statefs_libdir}/libprovider-keyboard_generic.so system
+
 
 %statefs_provider_install qt5 bluez %{_statefs_libdir}/libprovider-bluez.so system
 %statefs_provider_install qt5 upower %{_statefs_libdir}/libprovider-upower.so system
 %statefs_provider_install qt5 connman %{_statefs_libdir}/libprovider-connman.so system
 %statefs_provider_install qt5 ofono %{_statefs_libdir}/libprovider-ofono.so system
 %statefs_provider_install qt5 mce %{_statefs_libdir}/libprovider-mce.so system
-%statefs_provider_install qt5 keyboard_generic %{_statefs_libdir}/libprovider-keyboard_generic.so system
 
 %statefs_provider_install qt5 profile %{_statefs_libdir}/libprovider-profile.so user
 
@@ -581,28 +580,6 @@ fi
 /sbin/ldconfig
 %statefs_postun
 
-%files %{p_keyboard_generic} -f keyboard_generic.files
-%defattr(-,root,root,-)
-
-%pre %{p_keyboard_generic}
-%statefs_pre
-if [ -f %{_statefs_libdir}/libprovider-keyboard-generic.so ]; then
-statefs unregister %{_statefs_libdir}/libprovider-keyboard-generic.so || :
-fi
-
-%post %{p_keyboard_generic}
-/sbin/ldconfig
-%statefs_provider_register qt5 keyboard_generic system
-%statefs_post
-
-%preun %{p_keyboard_generic}
-%statefs_preun
-%statefs_provider_unregister qt5 keyboard_generic system
-
-%postun %{p_keyboard_generic}
-/sbin/ldconfig
-%statefs_postun
-
 
 %files %{p_profile} -f profile.files
 %defattr(-,root,root,-)
@@ -679,6 +656,25 @@ fi
 %statefs_provider_unregister default back_cover system
 
 %postun %{p_back_cover}
+/sbin/ldconfig
+%statefs_postun
+
+%files %{p_keyboard_generic} -f keyboard_generic.files
+%defattr(-,root,root,-)
+
+%pre %{p_keyboard_generic}
+%statefs_pre
+
+%post %{p_keyboard_generic}
+/sbin/ldconfig
+%statefs_provider_register default keyboard_generic system
+%statefs_post
+
+%preun %{p_keyboard_generic}
+%statefs_preun
+%statefs_provider_unregister default keyboard_generic system
+
+%postun %{p_keyboard_generic}
 /sbin/ldconfig
 %statefs_postun
 

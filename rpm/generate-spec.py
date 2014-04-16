@@ -110,10 +110,10 @@ class Actions:
             , "connman" : decl_connman
             , "ofono" : decl_ofono
             , "mce" : decl_mce
-            , "keyboard_generic" : decl_keyboard_generic
             , "profile" : decl_profile
         }, "default" : {
             "udev" : decl_udev
+            , "keyboard_generic" : decl_keyboard_generic
             , "bme" : decl_bme
         }
     }
@@ -142,10 +142,10 @@ class Actions:
             , "connman" : ["internet", "network"]
             , "ofono" : "cellular"
             , "mce" : "system"
-            , "keyboard_generic" : "keyboard"
             , "profile" : "profile-info"
         }, "default" : {
             "udev" : "power"
+            , "keyboard_generic" : "keyboard"
             , "bme" : "power"
         }, "inout" : {
             "bluetooth" : "bluetooth"
@@ -166,10 +166,10 @@ class Actions:
             , "connman" : "inout-network"
             , "ofono" : "inout-cellular"
             , "mce" : "inout-mode-control"
-            , "keyboard_generic" : "inout-keyboard"
             , "profile" : "inout-profile"
         }, "default" : {
             "udev" : [ "upower", "inout-power" ]
+            , "keyboard_generic" : "inout-keyboard"
             , "bme" : [ "upower", "inout-power" ]
         }, "inout" : {
             "bluetooth" : "bluez"
@@ -190,10 +190,10 @@ class Actions:
             , "connman" : ", source - connman"
             , "ofono" : ", source - ofono"
             , "mce" : ", source - mce"
-            , "keyboard_generic" : ", source - sysfs/udev"
             , "profile" : ", source - profiled"
         }, "default" : {
             "udev" : ", source - sysfs/udev"
+            , "keyboard_generic" : ", source - sysfs/udev"
             , "bme" : ", source - bme"
             , "back_cover" : ", source - back_cover"
         }, "inout" : {
@@ -310,11 +310,10 @@ class Actions:
         res.append("\n")
         return '\n'.join(res)
 
-    qt5_system = ["bluez", "upower", "connman", "ofono", "mce"
-                  , "keyboard_generic"]
+    qt5_system = ["bluez", "upower", "connman", "ofono", "mce"]
     qt5_user = ["profile"]
 
-    default_system = ["udev", "bme", "back_cover"]
+    default_system = ["udev", "bme", "back_cover", "keyboard_generic"]
 
     old_names = { "keyboard_generic" : "keyboard-generic" }
 
