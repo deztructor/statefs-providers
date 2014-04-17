@@ -53,7 +53,7 @@ BuildArch: noarch
 decl_udev = '''
 BuildRequires: boost-filesystem >= 1.51.0
 BuildRequires: boost-devel >= 1.51.0
-BuildRequires: pkgconfig(cor-udev) >= 0.1.11
+BuildRequires: pkgconfig(cor-udev) >= 0.1.14
 BuildRequires: pkgconfig(statefs-util) >= %{statefs_ver}
 '''
 
@@ -90,7 +90,7 @@ Provides: statefs-provider-inout-profile = 0.2.44.99
 '''
 
 decl_keyboard_generic = '''
-BuildRequires: pkgconfig(cor-udev) >= 0.1.11
+BuildRequires: pkgconfig(cor-udev) >= 0.1.14
 '''
 
 def mk_pkg_name(name):

@@ -6,7 +6,7 @@
 %define maemo_ver1 0.7.31
 %define meego_ver 0.1.0
 %define meego_ver1 0.1.0.1
-%define statefs_ver 0.3.24
+%define statefs_ver 0.3.25
 
 Summary: Statefs providers
 Name: statefs-providers
@@ -32,7 +32,7 @@ BuildRequires: statefs >= %{statefs_ver}
 BuildRequires: pkgconfig(statefs-cpp) >= %{statefs_ver}
 BuildRequires: pkgconfig(Qt5Core)
 BuildRequires: pkgconfig(Qt5DBus)
-BuildRequires: pkgconfig(cor) >= 0.1.8
+BuildRequires: pkgconfig(cor) >= 0.1.14
 
 %description
 %{summary}
@@ -213,7 +213,7 @@ Requires(post): /sbin/ldconfig
 Requires(postun): /sbin/ldconfig
 BuildRequires: boost-filesystem >= 1.51.0
 BuildRequires: boost-devel >= 1.51.0
-BuildRequires: pkgconfig(cor-udev) >= 0.1.11
+BuildRequires: pkgconfig(cor-udev) >= 0.1.14
 BuildRequires: pkgconfig(statefs-util) >= %{statefs_ver}
 Obsoletes: contextkit-meego-battery-upower <= %{meego_ver}
 Provides: contextkit-meego-battery-upower = %{meego_ver1}
@@ -265,7 +265,7 @@ Summary: Statefs provider, source - sysfs/udev
 Group: System Environment/Libraries
 Requires(post): /sbin/ldconfig
 Requires(postun): /sbin/ldconfig
-BuildRequires: pkgconfig(cor-udev) >= 0.1.11
+BuildRequires: pkgconfig(cor-udev) >= 0.1.14
 Obsoletes: contextkit-plugin-keyboard-generic <= %{ckit_version}
 Provides: contextkit-plugin-keyboard-generic = %{ckit_version1}
 Provides: statefs-provider-keyboard = %{version}-%{release}
